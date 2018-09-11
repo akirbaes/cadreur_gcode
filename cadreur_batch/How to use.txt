@@ -1,0 +1,6 @@
+v2:
+Fixed the issue with removed duplicate points that shouldn't be removed
+Added duplicate point that should have been added when creating a new column
+v3: 10/09/2018
+Drop several gcode files from anywhere on "drop_here_to_recadre" to recadre them based on the pyde's settings.
+Separated between a python-only version that's quicker and a processing version that's slower to boot
