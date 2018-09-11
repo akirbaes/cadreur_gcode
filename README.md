@@ -16,6 +16,9 @@ G0 ou G1 pour les déplacements, le reste est ignoré (copié tel quel)
 Z0 ou Z10 sont les seules valuers
 X et Y peut être négatif, à virgules, mais pas un float exponentiel (pas géré dans le regex, pourrait l'être).
 
+Le .bat drag-and-drop version processing utilise le jar qui se trouve dans ../jar. Si vous déplacez le dossier, copiez le jar a proximité ou modifiez le .bat!
+Ou simplement utilisez la version python pure.
+
 # Visualiseur gcode
 Affiche le résultat des déplacement du plotteur du gcode
 
@@ -29,9 +32,13 @@ O pour ouvrir un autre fichier. Cepandant, dû aux limitations de Processing ver
 
 Modifier le fichier pyde pour changer l'échelle au chargement etc.
 
+Le .bat drag-and-drop utilise le jar qui se trouve dans ../jar. Si vous déplacez le dossier, copiez le jar a proximité ou modifiez le .bat!
+
 # Générateur d'image
 Version allégée du visualiseur qui créé juste une image et quitte
 
 L'affichage est en processing.
 Drang-and-drop plusieurs fichiers gcodes sur le .bat pour lancer le générateur pour chaqun.
 Les images seront créées près du gcode.
+
+Le .bat drag-and-drop utilise le jar qui se trouve dans ../jar. Si vous déplacez le dossier, copiez le jar a proximité ou modifiez le .bat!
