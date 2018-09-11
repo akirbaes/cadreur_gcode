@@ -1,0 +1,4 @@
+v2:
+Press "o" to open a file via a prompt
+v3: 10/09/2018
+Drop a gcode file on "drop_here_to_open_visualizer.bat" to open it easily

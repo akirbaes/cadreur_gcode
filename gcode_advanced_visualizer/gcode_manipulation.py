@@ -4,8 +4,8 @@ import re
 import os 
 from math import ceil
 dir_path = os.path.dirname(os.path.realpath(__file__))
-print(dir_path)
-print(os.listdir(dir_path))
+#print(dir_path)
+#print(os.listdir(dir_path))
 
 """  Define for Cadrage (Gcode manip)"""
 LEFT = 0
@@ -272,6 +272,8 @@ def remove_borders(gcode, left=LEFT, top=TOP, total_width=TOTAL_WIDTH, total_hei
             #Insérer un point en l'air avant (si on va dessiner)
             lines.append(recombine_move(
               0, previous_f, previous_comment + " [after cut]", insert_point, 10))
+            lines.append(recombine_move(
+              0, previous_f, previous_comment + " [after cut floor]", insert_point, 0))
           lines.append(recombine_move(
             previous_g, previous_f, previous_comment + " [moved]", insert_point, previous_z))
           lines.append(move)
@@ -288,6 +290,8 @@ def remove_borders(gcode, left=LEFT, top=TOP, total_width=TOTAL_WIDTH, total_hei
             
           if(Z == 0):
             #Insérer un point en l'air après (si on était en train de dessiner)
+            lines.append(recombine_move(
+              0, F, comment + " [before cut floor]", insert_point, 0))
             lines.append(recombine_move(
               0, F, comment + " [before cut]", insert_point, 10))
             G=0

@@ -9,9 +9,14 @@ Utilisation:
     
     C pour changer les couleurs
     V pour prendre une capture d'écran
+    O pour le prompt d'ouverture de fichier
 """
 
 filename = "jab4c20case_1.gcode"
+try:
+    filename=os.environ['USEFILE']
+except:
+    print("No USEFILE parameter given: using default filename")
 
 #Initialiser le Gcode
 #On peut le manipuler
@@ -23,12 +28,12 @@ gcode = scale(gcode,1,1)
 
 #Initialiser les variables de l'affichage de l'écran
 minx,maxx,miny,maxy = get_borders(gcode)
-print("X:",minx,"to",maxx)
-print("Y:",miny,"to",maxy)
+print("X: %f to %f"%(minx,maxx))
+print("Y: %f to %f"%(miny,maxy))
 
 screenwidth = int(ceil(max(maxx, maxx-minx)))
 screenheight = int(ceil(max(maxy, maxy-miny)))
-print("Width:",screenwidth,"Height:",screenheight)
+print("Width: %d  Height: %d"%(screenwidth,screenheight))
 
 #Initialiser les variables de l'interface
 #Elles seront redéfinies plus tard
@@ -83,38 +88,44 @@ def select_file(filepath):
         last_filepath = filepath #Next will reopen this
         
         if(not endwith(filepath.getAbsolutePath(),".gcode")):
-            print(filepath,"is not a .gcode file")
+            print(str(filepath)+" is not a .gcode file")
         elif(filepath.exists()):
             print("Opening",filepath)
             global filename
             filename = str(filepath.getAbsolutePath())
             
-            global last_drawn
-            last_drawn = 0
-            global requested
-            requested = 0
-            
-            set_last_point(None,None)
-            global gcode
-            gcode = import_gcode(filename)
-            print(len(gcode),"lines read")
-            global minx,maxx,miny,maxy
-            minx,maxx,miny,maxy = get_borders(gcode)
-            print("X:",minx,"to",maxx)
-            print("Y:",miny,"to",maxy)
-            global screenwidth, screenheight
-            screenwidth = int(ceil(max(maxx, maxx-minx)))
-            screenheight = int(ceil(max(maxy, maxy-miny)))
-            print("Width:",screenwidth,"Height:",screenheight)
-            global first_time
-            first_time=True
-            global reading
-            reading = True
-            setup()
-            size(screenwidth+32,screenheight+32+32+48)
-            print("gcode updated")
+            gcodetemp = import_gcode(filename)
+            print(len(gcodetemp),"lines read")
+            minx2,maxx2,miny2,maxy2 = get_borders(gcodetemp)
+            print("X: %f to %f"%(minx2,maxx2))
+            print("Y: %f to %f"%(miny2,maxy2))
+            if not(minx2==float("inf") or miny2==float("inf") or maxx2==float("-inf") or maxy2==float("-inf")):
+                
+                global last_drawn
+                last_drawn = 0
+                global requested
+                requested = 0
+                
+                set_last_point(None,None)
+                global minx,maxx,miny,maxy
+                minx,maxx,miny,maxy = minx2,maxx2,miny2,maxy2
+                global screenwidth, screenheight
+                screenwidth = int(ceil(max(maxx, maxx-minx)))
+                screenheight = int(ceil(max(maxy, maxy-miny)))
+                global gcode
+                gcode = gcodetemp
+                print("Width: %d  Height: %d"%(screenwidth,screenheight))
+                global first_time
+                first_time=True
+                global reading
+                reading = True
+                #setup()
+                #size(screenwidth+32,screenheight+32+32+48)
+                print("gcode updated")
+            else:
+                print("Error: gcode empty, nothing to do")
         else:
-            print(filepath,"doesn't exist")
+            print(str(filepath)+" doesn't exist")
     loop()
     
 def draw():
@@ -129,14 +140,14 @@ def draw():
         
         ####Prends une capture d'écran de la zone de dessin uniquement
         #A commenter, remplacé par la touche "V"
-        # set_last_point(None,None)
-        # draw_gcode(gcode)
-        # border = 8
-        # partialSave = get(16+max(0,int(-minx)),16+max(0,int(-miny)),
-        #                 int(ceil(maxx)),int(ceil(maxy)))
-        # partialSave.save(filename+".png")
-        # redraw_background()
-        # set_last_point(None,None)
+        set_last_point(None,None)
+        draw_gcode(gcode)
+        border = 8
+        partialSave = get(16+max(0,int(-minx)),16+max(0,int(-miny)),
+                        int(ceil(maxx)),int(ceil(maxy)))
+        partialSave.save(filename+".png")
+        redraw_background()
+        set_last_point(None,None)
         
     global last_drawn, reading, requested
     codesize = len(gcode)
@@ -218,7 +229,7 @@ def draw():
         partialSave = get(16-border+max(0,int(-minx)),16-border+max(0,int(-miny)),
                         int(ceil(maxx))+2*border,int(ceil(maxy))+2*border)
         partialSave.save(filename+"_"+str(last_drawn)+".png")
-        print("Saved image",filename+"_"+str(last_drawn)+".png")
+        print("Saved image "+filename+"_"+str(last_drawn)+".png")
         key_held = True
     
     if ((keyPressed) and (key == 'o') and not key_held):
@@ -257,11 +268,11 @@ def draw():
     string2 = ""
     string3 = ""
     if(requested>2):
-        string1=gcode[requested-2]
+        string1=str(requested-1)+u"→"+gcode[requested-2]
     if(requested>1 and requested<=codesize):
-        string2=gcode[requested-1]
+        string2=str(requested)+u"→"+gcode[requested-1]
     if(requested<codesize):
-        string3=gcode[requested]
+        string3=str(requested+1)+u"→"+gcode[requested]
     fill(128);
     text(string1,0,screenheight+64+16-3);
     text(string3,0,screenheight+64+48-3);
