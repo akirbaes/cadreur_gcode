@@ -1,0 +1,2 @@
+v1 10/09/2018
+Drop several gcode files from anywhere on "drop_here_to_make_images.bat" to turn them into images.
