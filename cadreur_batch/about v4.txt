@@ -4,3 +4,5 @@ Added duplicate point that should have been added when creating a new column
 v3: 10/09/2018
 Drop several gcode files from anywhere on "drop_here_to_recadre" to recadre them based on the pyde's settings.
 Separated between a python-only version that's quicker and a processing version that's slower to boot
+v4: 19/09/2018
+Spikes cleanup beta version via a finite 2 states machine

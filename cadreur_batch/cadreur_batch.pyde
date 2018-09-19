@@ -16,8 +16,8 @@ origin_y = 0
 scaling_x = 2
 scaling_y = 2
 
-filename = "jab6c5case_3.gcode"
-#filename = "jab6c5case_1.gcode"
+filename = "jab4c20case_3.gcode"
+#filename = "jab4c20case_1.gcode"
 try:
     filename=os.environ['USEFILE']
 except:
@@ -126,31 +126,103 @@ def reverse_simple(moves):
 	temp.reverse()
 	result.append(temp)
 	
-def cleanup(moves):
-	#Enlève les dupliquats et déplacements inutiles
-	result = []
-	consecutive_z10 = 0
-	consecutive_pos = 0
-	previous_pos = (0,0)
-	for move in moves:
-		move=move.strip()
-		if(startwith(move,"G0") or startwith(move,"G1")):
-			G, F, comment, point, Z = process_move(move)
-			if(Z==10):
-				consecutive_z10+=1
-			else:
-				consecutive_z10=0
-			"""if(point == previous_pos): #enlevé car pose problème
-				consecutive_pos+=1
-			else:
-				consecutive_pos=0"""
-			if(consecutive_pos>=2 or consecutive_z10>=3):
-				result.pop(-1)
-			result.append(move)
-			previous_pos = point
-		else:
-			result.append(move)
-	return result
+def cleanup_airmoves(moves):
+    #Enlève les déplacements dans l'air inutiles et les accélère
+    result = []
+    consecutive_z10 = 0
+    for move in moves:
+        move=move.strip()
+        if(startwith(move,"G0") or startwith(move,"G1")):
+            G, F, comment, point, Z = process_move(move)
+            if(Z==10):
+                F=2000
+                consecutive_z10+=1
+            else:
+                consecutive_z10=0
+            if(consecutive_z10>=3):
+                result.pop(-1)
+            result.append(recombine_move(G,F,comment,point,Z))
+        else:
+            result.append(move)
+    return result
+
+
+def cleanup_spikes(moves):
+    #Enlève les pics et dents de scie
+    NEUTRAL_STATE = 0
+    POTENTIAL_SPIKE = 1
+    state = NEUTRAL_STATE
+    neutral_buffer = []
+    spike_buffer = []
+    current_z = 10
+    current_position = (0,0)
+    
+    gcode_result = []
+    
+    for move in moves:
+        move=move.strip()
+        if(startwith(move,"G0") or startwith(move,"G1")):
+            G, F, comment, pos, Z = process_move(move)
+            
+            same_pos = (pos == current_position)
+            change_pos = (not same_pos)
+            same_z = (Z == current_z)
+            change_z = (not same_z)
+            
+            if(state == NEUTRAL_STATE):
+                if(same_pos and same_z):
+                    neutral_buffer.append(move)
+                elif(change_pos and same_z):
+                    gcode_result.extend(neutral_buffer) #flush buffer
+                    neutral_buffer = [move]
+                    current_position = pos
+                elif(change_pos and change_z):
+                    #dent de scie /|
+                    #ajoute un côté à la dent de scie pour en faire un rectangle |-|
+                    neutral_buffer.append(0,1000,";Eviter dent de scie",current_position,Z)
+                    gcode_result.extend(neutral_buffer) #flush buffer
+                    neutral_buffer = [move]
+                    current_position = pos
+                    current_z = Z
+                elif(same_pos and change_z):
+                    #pic ou dent: changer d'état
+                    state = POTENTIAL_SPIKE
+                    spike_buffer = [move]
+                    current_z = Z
+                    current_position = pos
+            elif(state == POTENTIAL_SPIKE):
+                if(same_pos and same_z):
+                    spike_buffer.append(move)
+                elif(same_pos and change_z):
+                    #Pic détecté!
+                    state = NEUTRAL_STATE
+                    #On enlève le pic et on revient au départ
+                    neutral_buffer.append(";Pic enleve ici")
+                    spike_buffer = []
+                    neutral_buffer.append(move)
+                    current_z = Z
+                elif(change_pos and same_z):
+                    #Pic évité! restart en mode normal
+                    state = NEUTRAL_STATE
+                    gcode_result.extend(neutral_buffer) #flush buffer
+                    neutral_buffer = [move]
+                    current_position = pos
+                elif(change_pos and change_z):
+                    #Dent de scie |\
+                    #ajoute un côté à la dent de scie pour en faire un rectangle |-|
+                    neutral_buffer.append(0,1000,";Eviter dent de scie'",pos,current_z)
+                    gcode_result.extend(neutral_buffer) #flush buffer
+                    neutral_buffer = spike_buffer
+                    spike_buffer = [move]
+                    current_position = pos
+                    current_z = Z
+                    
+    gcode_result.extend(neutral_buffer)
+    neutral_buffer = []
+    gcode_result.extend(spike_buffer)
+    spike_buffer = []
+    
+    return gcode_result
 	
 def get_borders(moves):
 	#Return border extreme values 
@@ -314,7 +386,8 @@ if __name__ == "__main__":
         for yy in range(0, int(ceil(maxy)), stepy):
             lines = shift(gcode,-xx,-yy)
             lines = remove_borders(lines)
-            lines=cleanup(lines)
+            lines=cleanup_airmoves(lines)
+            lines=cleanup_spikes(lines)
             export_gcode(lines,filename+"modified_x"+str(xx)+"_y"+str(yy)+".gcode")
             counter+=1
             print("Section "+str(counter)+" out of "+str(total_images))
