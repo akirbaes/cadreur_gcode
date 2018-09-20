@@ -135,7 +135,7 @@ def cleanup_airmoves(moves):
         if(startwith(move,"G0") or startwith(move,"G1")):
             G, F, comment, point, Z = process_move(move)
             if(Z==10):
-                F=2000
+                #F=2000
                 consecutive_z10+=1
             else:
                 consecutive_z10=0

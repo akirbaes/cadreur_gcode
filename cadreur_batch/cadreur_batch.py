@@ -137,7 +137,7 @@ def cleanup_airmoves(moves):
         if(startwith(move,"G0") or startwith(move,"G1")):
             G, F, comment, point, Z = process_move(move)
             if(Z==10):
-                F=2000
+                #F=2000
                 consecutive_z10+=1
             else:
                 consecutive_z10=0
@@ -182,7 +182,7 @@ def cleanup_spikes(moves):
                 elif(change_pos and change_z):
                     #dent de scie /|
                     #ajoute un côté à la dent de scie pour en faire un rectangle |-|
-                    neutral_buffer.append(0,1000,";Eviter dent de scie",current_position,Z)
+                    neutral_buffer.append(0,1000,";Eviter dent de scie /|",current_position,Z)
                     gcode_result.extend(neutral_buffer) #flush buffer
                     neutral_buffer = [move]
                     current_position = pos
@@ -190,7 +190,7 @@ def cleanup_spikes(moves):
                 elif(same_pos and change_z):
                     #pic ou dent: changer d'état
                     state = POTENTIAL_SPIKE
-                    spike_buffer = [move]
+                    spike_buffer = [move+";\tPotential spike?"]
                     current_z = Z
                     current_position = pos
             elif(state == POTENTIAL_SPIKE):
@@ -201,7 +201,7 @@ def cleanup_spikes(moves):
                     print("Pic détecté!")
                     state = NEUTRAL_STATE
                     #On enlève le pic et on revient au départ
-                    neutral_buffer.append(";Pic enleve ici")
+                    neutral_buffer.append(";\tPic enleve ici")
                     spike_buffer = []
                     neutral_buffer.append(move)
                     current_z = Z
@@ -209,12 +209,12 @@ def cleanup_spikes(moves):
                     #Pic évité! restart en mode normal
                     state = NEUTRAL_STATE
                     gcode_result.extend(neutral_buffer) #flush buffer
-                    neutral_buffer = spike_buffer+[move]
+                    neutral_buffer = spike_buffer+[move+";\tNo spike"]
                     current_position = pos
                 elif(change_pos and change_z):
                     #Dent de scie |\
                     #ajoute un côté à la dent de scie pour en faire un rectangle |-|
-                    neutral_buffer.append(0,1000,";Eviter dent de scie'",pos,current_z)
+                    neutral_buffer.append(0,1000,";Eviter dent de scie |\\",pos,current_z)
                     gcode_result.extend(neutral_buffer) #flush buffer
                     neutral_buffer = spike_buffer
                     spike_buffer = [move]
