@@ -149,6 +149,7 @@ def cleanup_airmoves(moves):
     return result
 
 
+
 def cleanup_spikes(moves):
     #Enlève les pics et dents de scie
     NEUTRAL_STATE = 0
@@ -197,6 +198,7 @@ def cleanup_spikes(moves):
                     spike_buffer.append(move)
                 elif(same_pos and change_z):
                     #Pic détecté!
+                    print("Pic détecté!")
                     state = NEUTRAL_STATE
                     #On enlève le pic et on revient au départ
                     neutral_buffer.append(";Pic enleve ici")
@@ -207,7 +209,7 @@ def cleanup_spikes(moves):
                     #Pic évité! restart en mode normal
                     state = NEUTRAL_STATE
                     gcode_result.extend(neutral_buffer) #flush buffer
-                    neutral_buffer = [move]
+                    neutral_buffer = spike_buffer+[move]
                     current_position = pos
                 elif(change_pos and change_z):
                     #Dent de scie |\
@@ -218,6 +220,9 @@ def cleanup_spikes(moves):
                     spike_buffer = [move]
                     current_position = pos
                     current_z = Z
+        else:
+            gcode_result.append(move)
+        
                     
     gcode_result.extend(neutral_buffer)
     neutral_buffer = []
@@ -388,7 +393,8 @@ if __name__ == "__main__":
         for yy in range(0, int(ceil(maxy)), stepy):
             lines = shift(gcode,-xx,-yy)
             lines = remove_borders(lines)
-            lines=cleanup(lines)
+            lines=cleanup_airmoves(lines)
+            lines=cleanup_spikes(lines)
             export_gcode(lines,filename+"modified_x"+str(xx)+"_y"+str(yy)+".gcode")
             counter+=1
             print("Section "+str(counter)+" out of "+str(total_images))
