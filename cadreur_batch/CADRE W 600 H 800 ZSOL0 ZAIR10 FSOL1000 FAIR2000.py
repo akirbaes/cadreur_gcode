@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 import re
 import os
 import sys
@@ -9,6 +10,15 @@ LEFT = 0
 TOP = 0
 BOTTOM = 0
 RIGHT = 0
+
+# startCodeDelta="""G28
+# G0 X0 Y0 Z15 F3000;
+# """
+# startCodePlotterV2="""G90; Absolut Positioning
+# G21; Set unit to mm
+# G92 X0 Y0 Z10; start point position
+# """
+
 # origin_x = 0
 # origin_y = 0
 # scaling_x = 1
@@ -24,7 +34,7 @@ def search_int(dataline, varname):
 def search_float(dataline, varname):
     match = re.search(varname.lower()+" *[-+]?[0-9]*\.?[0-9]*",dataline.lower())
     if(match):
-        print(match.group(0))
+        # print(match.group(0))
         return float(match.group(0)[len(varname):].strip())
     else:
         return None
@@ -38,8 +48,8 @@ def extract_all_numbers(dataline):
     g=search_int(dataline,"g")
     f=search_int(dataline,"h")
 
-    print(dataline)
-    print(g,f,x,y,z,e)
+    # print(dataline)
+    # print(g,f,x,y,z,e)
     return g,f,x,y,z,e
 	
 class move:
@@ -327,11 +337,13 @@ def import_gcode(filename):
 	return gcode
 	
 def export_gcode(moves, filename):
-	#Ecrit une liste de lignes dans un fichier
-	fileout = open(filename,"w")
-	for line in moves:
-		fileout.write(line+"\n")
-	fileout.close()
+    #Ecrit une liste de lignes dans un fichier
+	if(moves):
+		fileout = open(filename,"w")
+		#fileout.write(HEADER)
+		for line in moves:
+			fileout.write(line+"\n")
+		fileout.close()
 
 def rn(number):
     txt = str(number)
@@ -357,7 +369,7 @@ def remove_borders(gcode, total_width, total_height, left=LEFT, top=TOP, right=R
     previous_z = 10
     
     lines = [] #résultat ici
-    
+    realmovescounter=0
     for move in gcode:
         move = move.strip() #enlève les espaces et \n de fin et début de ligne
         if(startwith(move,"G0") or startwith(move,"G1")):
@@ -369,6 +381,7 @@ def remove_borders(gcode, total_width, total_height, left=LEFT, top=TOP, right=R
                     #Ce point aussi: on laisse tomber un point
                     pass
                 else:
+                    realmovescounter+=1
                     #Ce point est dedans: on insère un point intermédiaire
                     insert_point = crop_line(point,previous_position)
                     if(previous_z == ZSOL):
@@ -381,6 +394,7 @@ def remove_borders(gcode, total_width, total_height, left=LEFT, top=TOP, right=R
                         previous_g, previous_f, previous_comment + " [moved]", insert_point, previous_z))
                     lines.append(move)
             else:
+                realmovescounter+=1
                 #Le point précédent était dedans
                 if(is_inside(point)):
                     #Ce point aussi: on le garde
@@ -389,7 +403,7 @@ def remove_borders(gcode, total_width, total_height, left=LEFT, top=TOP, right=R
                     #Ce point est dehors: on insère un point intermédiaire
                     insert_point = crop_line(point,previous_position)
                     lines.append(recombine_move(
-                        G, F, comment + " [moved]", insert_point, Z))
+                    G, F, comment + " [moved]", insert_point, Z))
                         
                     if(Z == ZSOL):
                         #Insérer un point en de G0 au sol
@@ -410,7 +424,11 @@ def remove_borders(gcode, total_width, total_height, left=LEFT, top=TOP, right=R
             previous_z = Z
         else:
             lines.append(move)
-    return lines
+    if(realmovescounter>0):
+        # raw_input(str([realmovescounter, lines]))
+        return lines
+    else:
+        return []
 	
 def isfloat(number):
     try:
@@ -451,14 +469,17 @@ def main():
     fair = search_float(scriptname,"fair")
     cut_width = search_float(scriptname,"w")
     cut_height = search_float(scriptname,"h")
+    # header_id = search_int(scriptname,"head")
     print(scriptname)
     print(zsol,zair,fsol,fair,cut_height,cut_width)
     
     global TOTAL_WIDTH, TOTAL_HEIGHT, ZAIR, ZSOL, FAIR, FSOL
+    # global HEADER
     ZAIR = zair or 10
     ZSOL = zsol or 0
     FAIR = fair or 3000
     FSOL = fsol or 2000
+    # HEADER = (startCodeDelta, startCodePlotterV2)[header_id-1 or 0]
     size = []
     filename = ""
     for arg in sys.argv[1:]:
@@ -466,6 +487,8 @@ def main():
             size.append(int(arg))
         else:
             filename=arg
+    if(not filename):
+        filename=str(raw_input("Please provide filename: ")).strip()
     if(not size):
         size = [cut_width,cut_height]
         
@@ -489,22 +512,20 @@ def main():
             for xx in range(0, int(ceil(maxx)), stepx):
                 lines = shift(gcode,-xx,-yy)
                 lines = remove_borders(lines,*size)
-                lines=cleanup_airmoves(lines)
-                # lines=cleanup_spikes(lines)
-                
-                outname = generate_outname(filename,counter,maxx/stepx,total_images,xx/stepx,yy/stepy)
+                if(lines):
+					lines=cleanup_airmoves(lines)
+					# lines=cleanup_spikes(lines)
+					#raw_input(str(lines))
+					outname = generate_outname(filename,counter,maxx/stepx,total_images,xx/stepx,yy/stepy)
+					print("Section "+str(counter+1)+" out of "+str(total_images))
+					export_gcode(lines,outname)
                 counter+=1
-                print("Section "+str(counter)+" out of "+str(total_images))
-                
-                export_gcode(lines,outname)
         print("Done")
         exit()
         
     else:
         if(not size):
             input("Please provide cutting size")
-        if(not filename):
-            input("Please provide filename")
     print("Opening "+filename)
 		
 if __name__ == "__main__":
